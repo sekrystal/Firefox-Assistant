@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Assistant</title>
+  <style>
+    @font-face {
+      font-family: 'IBM Plex Mono';
+      src: url('fonts/IBMPlexMono-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'IBM Plex Mono';
+      src: url('fonts/IBMPlexMono-Italic.ttf') format('truetype');
+      font-weight: 400;
+      font-style: italic;
+    }
+    @font-face {
+      font-family: 'IBM Plex Mono';
+      src: url('fonts/IBMPlexMono-Bold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'IBM Plex Mono';
+      src: url('fonts/IBMPlexMono-BoldItalic.ttf') format('truetype');
+      font-weight: 700;
+      font-style: italic;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      background-color: #121212;
+      color: #ffffff;
+      font-family: 'IBM Plex Mono', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', monospace;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #chat {
+      overflow-y: auto;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+      max-width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      flex-grow: 1;
+    }
+
+    .message {
+      margin-bottom: 12px;
+      white-space: pre-wrap;
+      position: relative;
+      padding-right: 40px; /* Space for copy button */
+      user-select: text; /* Enable text selection */
+      cursor: text;
+    }
+
+    .user {
+      color: #82AAFF;
+    }
+
+    .assistant, .gpt {
+      color: #ffffff;
+      position: relative;
+    }
+
+    .gpt {
+      background-color: #1a1f2b;
+      border-left: 4px solid #4fc3f7;
+      padding-left: 8px;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      background: #333;
+      border: 1px solid #555;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      z-index: 1;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    .copy-btn:hover {
+      opacity: 1;
+    }
+
+    .toggle-container {
+      padding: 10px;
+      text-align: center;
+      background: #121212;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 30px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #444;
+      border-radius: 30px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "💻";
+      height: 26px;
+      width: 26px;
+      left: 2px;
+      bottom: 2px;
+      background-color: #222;
+      color: white;
+      text-align: center;
+      line-height: 26px;
+      border-radius: 50%;
+      transition: .4s;
+    }
+
+    input:checked + .slider {
+      background-color: #4fc3f7;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(30px);
+      content: "☁️";
+    }
+
+    textarea {
+      width: 100%;
+      height: 80px;
+      background-color: #1e1e1e;
+      color: #ffffff;
+      border: 1px solid #444;
+      padding: 8px;
+      resize: vertical;
+    }
+
+    .button-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-evenly;
+      gap: 10px;
+      padding: 10px;
+      background-color: #121212;
+    }
+
+    button {
+      background-color: #2c2c2c;
+      color: #ffffff;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    button:hover {
+      background-color: #3c3c3c;
+    }
+
+    #pdf-upload {
+      background-color: #1a1f2b;
+      border-color: #4fc3f7;
+    }
+
+    #pdf-upload:hover {
+      background-color: #2a2f3b;
+    }
+
+    .gear-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 20px;
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+
+    .bibliography {
+      margin-top: 1em;
+      font-size: 0.95em;
+      color: #ccc;
+    }
+
+    .bibliography-link {
+      color: #87cefa;
+      text-decoration: underline;
+      font-weight: 500;
+    }
+
+    *, *::before, *::after {
+      font-family: 'IBM Plex Mono', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', monospace !important;
+    }
+
+    .message pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
+    }
+
+    .message.system {
+      color: #4fc3f7;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .message.system button {
+      background-color: #1a1f2b;
+      border: 1px solid #4fc3f7;
+      color: #4fc3f7;
+      padding: 4px 8px;
+      font-size: 0.9em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .message.system button:hover {
+      background-color: #4fc3f7;
+      color: #1a1f2b;
+    }
+  </style>
+</head>
+<body>
+  <button id="set-api-key" class="gear-button">⚙️</button>
+  <div id="chat"></div>
+  <div class="toggle-container">
+    <label class="switch">
+      <input type="checkbox" id="model-toggle">
+      <span class="slider"></span>
+    </label>
+  </div>
+  <textarea id="prompt" placeholder="Type your intent... (Cmd+Enter to send)"></textarea>
+  <div class="button-container">
+    <button id="send">Send</button>
+  </div>
+  <script type="module" src="pdf-handler.js"></script>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
