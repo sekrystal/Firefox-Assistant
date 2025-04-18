@@ -1,0 +1,14 @@
+{
+  "name": "control-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node control-server.js",
+    "start-node-api": "node ../pdf-api/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2"
+  }
+}

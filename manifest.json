@@ -2,13 +2,12 @@
   "manifest_version": 2,
   "name": "Assistant",
   "version": "1.0",
-  "description": "Chat with your local Mistral model, or Perplexity/GPT4 Researcher in Firefox",
+  "description": "Chat with your local Mistral model, or Perplexity/GPT-4 Researcher in Firefox",
   "permissions": [
     "storage",
     "activeTab",
     "tabs",
-    "<all_urls>",
-    "scripting"
+    "<all_urls>"
   ],
   "background": {
     "scripts": ["background.js"],
@@ -17,7 +16,8 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "run_at": "document_end"
     }
   ],
   "sidebar_action": {
@@ -38,9 +38,7 @@
     "fonts/IBMPlexMono-Regular.ttf",
     "fonts/IBMPlexMono-Italic.ttf",
     "fonts/IBMPlexMono-Bold.ttf",
-    "fonts/IBMPlexMono-BoldItalic.ttf",
-    "pdf.js/pdf.mjs",
-    "pdf.js/pdf.worker.mjs"
+    "fonts/IBMPlexMono-BoldItalic.ttf"
   ],
   "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'"
 }

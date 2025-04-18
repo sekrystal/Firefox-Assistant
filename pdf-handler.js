@@ -112,4 +112,29 @@ class PDFHandler {
   }
 }
 
-export default new PDFHandler();
+export async function checkPdfBotHealth() {
+  try {
+    const response = await fetch("http://localhost:8501/ping");
+    return response.ok;
+  } catch (e) {
+    console.warn("PDF Bot not available", e);
+    return false;
+  }
+}
+
+export async function fetchPdfSummaryFromBot(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("http://localhost:8501/api/pdf", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error("PDF Bot failed to summarize");
+  }
+
+  const data = await response.json();
+  return data.markdown || data.summary || data.text;
+}

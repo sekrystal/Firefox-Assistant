@@ -1,12 +1,12 @@
-# Firefox AI Research Assistant
+# Firefox AI Assistant
 
-A powerful Firefox extension that combines local and cloud-based AI models for enhanced web research capabilities.
+A Firefox extension that combines local and cloud-based AI models for enhanced web research capabilities.
 
 ## Project Thesis & Motivation
 
 This project began with a clear vision: creating a privacy-first research assistant that runs entirely locally. The foundation is built around the Mistral model running through Ollama, providing a balance of capability and privacy that's perfect for daily research tasks.
 
-Then came the guilty pleasure - I found myself increasingly drawn to the capabilities of combining Perplexity with GPT-4 for deep research. This created an interesting challenge - how to integrate these cloud tools while staying true to the project's privacy-focused roots?
+I found myself increasingly drawn to the capabilities of combining Perplexity with GPT-4 for deep research. This created an interesting challenge - how to integrate these cloud tools while staying true to the project's privacy-focused roots?
 
 The result is a dual-model approach that:
 - Defaults to local processing with Mistral for privacy-sensitive tasks
@@ -42,86 +42,88 @@ The Firefox sidebar implementation was chosen specifically because Firefox's com
   - Copy functionality
   - Status messages and accessibility features
 
-## Requirements
+## Installation & Setup
 
-### Local Model (Mistral)
-- [Ollama](https://ollama.ai/) - Local model runner
-- Mistral model (7B parameters, ~4GB disk space)
-- Node.js 18+ and npm
+### 1. Clone the Repository
 
-### Deep Research Model (Optional)
-- OpenAI API key
-- Perplexity API key ([Get here](https://docs.perplexity.ai/))
-- Node.js 18+ and npm
-
-## Installation
-
-### 1. Install Ollama
 ```bash
-# macOS (using Homebrew)
-brew install ollama
-
-# Linux
-curl https://ollama.ai/install.sh | sh
-
-# Windows
-# Visit https://ollama.ai/download
+git clone https://github.com/yourusername/your-repo.git
+cd your-repo
 ```
 
-### 2. Download Mistral Model
+---
+
+### 2. Install Requirements
+
+- **Ollama**  
+  [Install instructions](https://ollama.ai/download) or, on macOS:
+  ```bash
+  brew install ollama
+  ```
+
+- **Docker**  
+  [Get Docker Desktop](https://www.docker.com/products/docker-desktop/) or, on macOS:
+  ```bash
+  brew install --cask docker
+  ```
+  Make sure Docker Desktop is running before you continue.
+
+---
+
+### 3. Download Mistral with Ollama
+
 ```bash
-# After installing Ollama
 ollama pull mistral
 ```
+This will download the Mistral model for local use.
 
-### 3. Set Up Proxy Servers
+---
+
+### 4. Set the Control Server Token
+
+The control server manages all backend services and requires a token for secure commands.
+
+1. In the `control-server` directory, create or edit the `.env` file:
+    ```bash
+    cd control-server
+    echo "SERVER_TOKEN=your_secure_token_here" > .env
+    ```
+    Replace `your_secure_token_here` with a secure value of your choice.
+
+---
+
+### 5. Start the Control Server
+
+From the `control-server` directory:
 ```bash
-# Clone the repository
-git clone [your-repo-url]
-cd [your-repo-name]
-
-# Install dependencies for both proxies
-cd ollama-proxy
 npm install
-cd ../perplexity-proxy
-npm install
+npm run start
 ```
+The control server will:
+- Start/stop Docker Compose for the PDF bot
+- Start/stop the Ollama and Perplexity proxy servers
+- Expose endpoints for the extension to control all services
 
-### 4. Configure API Keys (for Deep Research)
-Create `.env` files in the perplexity-proxy directory:
-```bash
-# perplexity-proxy/.env
-OPENAI_API_KEY=your_openai_key_here
-PERPLEXITY_API_KEY=your_perplexity_key_here
-```
+---
 
-### 5. Start Services
-
-1. Start Ollama (Local Model):
-```bash
-# This runs in the background after installation
-# Verify it's running:
-ollama list
-```
-
-2. Start Proxy Servers:
-```bash
-# Terminal 1 - Ollama Proxy (Port 4000)
-cd ollama-proxy
-npm start
-
-# Terminal 2 - Deep Research Proxy (Port 3000)
-cd perplexity-proxy
-npm start
-```
-
-### 6. Install Firefox Extension
+### 6. Install the Extension in Firefox
 
 1. Open Firefox
-2. Navigate to `about:debugging`
+2. Go to `about:debugging`
 3. Click "This Firefox"
 4. Click "Load Temporary Add-on"
 5. Select the `manifest.json` file from your cloned repository
+
+---
+
+### 7. Double-Check That You've Started All Servers
+
+Before using the extension, make sure:
+- Docker Desktop is running
+- The Ollama daemon is running
+- The control server is running (`npm run start` in the `control-server` directory)
+- The Mistral model is running (`ollama run mistral` in a terminal)
+- (Optional) You've used the extension's UI button to start/stop all services
 
 ## Usage
 
@@ -134,6 +136,18 @@ npm start
    - Process selected text or entire pages
    - Handle PDFs (local model only currently)
    - Provide AI-powered insights and analysis
+
+## PDF Support
+
+- **PDF reading is being updated!**
+- The new workflow uses [ollama-pdf-bot](https://github.com/amithkoujalgi/ollama-pdf-bot) instead of PDF.js
+- The control server manages the ollama-pdf-bot via Docker Compose
+- **Integration with the Mistral workflow is in progress**
+- Current status: PDF bot runs in its own Docker container, but full integration with the extension is coming soon
+
+### Attribution
+
+This project incorporates [ollama-pdf-bot](https://github.com/amithkoujalgi/ollama-pdf-bot) by Amith Koujalgi, which is licensed under the [MIT License](https://github.com/amithkoujalgi/ollama-pdf-bot/blob/main/LICENSE). The original repository can be found at https://github.com/amithkoujalgi/ollama-pdf-bot.
 
 ## Troubleshooting
 
@@ -164,7 +178,7 @@ sudo systemctl restart ollama
 - API key management
 
 ### In Progress
-- PDF.js integration
+- **ollama-pdf-bot integration** - Replacing PDF.js with [ollama-pdf-bot](https://github.com/amithkoujalgi/ollama-pdf-bot)
 - Deep Research pipeline optimization
 - Content truncation improvements
 - PDF upload interface

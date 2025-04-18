@@ -1,43 +1,95 @@
-/**
- * @fileoverview Main extension UI and logic handler
- * @requires pdf.js
- */
+async function handlePDFWithModelFallback(file, userInput, model) {
+  if (model !== 'local') {
+    const { extractTextFromPDF } = await import(chrome.runtime.getURL('pdf-handler.js'));
+    const text = await extractTextFromPDF(file);
+    const prompt = `${userInput}\n\n--- Uploaded PDF Start ---\n${text.slice(0, 20000)}\n--- Uploaded PDF End ---`;
+    await sendPrompt(prompt, userInput);
+    return;
+  }
 
-/**
- * @typedef {Object} PDFExtractResult
- * @property {boolean} success - Whether the extraction was successful
- * @property {string} text - Extracted text content
- * @property {string} [error] - Error message if extraction failed
- */
+  const usePdfBot = await Promise.race([
+    checkPdfBotHealth(),
+    new Promise(resolve => setTimeout(() => resolve(false), 3000))
+  ]);
+
+  if (usePdfBot) {
+    try {
+      const result = await fetchPdfSummaryFromBot(file);
+      const prompt = `${userInput}\n\n--- PDF Summary via Local Bot ---\n${result}\n--- End ---`;
+      await sendPrompt(prompt, userInput);
+    } catch (err) {
+      console.warn("PDF bot failed, falling back to local PDF.js", err);
+      const { extractTextFromPDF } = await import(chrome.runtime.getURL('pdf-handler.js'));
+      const text = await extractTextFromPDF(file);
+      const prompt = `${userInput}\n\n--- Uploaded PDF Start ---\n${text.slice(0, 20000)}\n--- Uploaded PDF End ---`;
+      await sendPrompt(prompt, userInput);
+    }
+  } else {
+    const { extractTextFromPDF } = await import(chrome.runtime.getURL('pdf-handler.js'));
+    const text = await extractTextFromPDF(file);
+    const prompt = `${userInput}\n\n--- Uploaded PDF Start ---\n${text.slice(0, 20000)}\n--- Uploaded PDF End ---`;
+    await sendPrompt(prompt, userInput);
+  }
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const gearButton = document.getElementById("set-api-key");
   const chat = document.getElementById("chat");
   const modelToggle = document.getElementById("model-toggle");
   const promptInput = document.getElementById("prompt");
-  const pdfUpload = document.getElementById("pdf-upload");
 
-  /**
-   * Extracts text content from a PDF file
-   * @param {File} file - The PDF file to extract text from
-   * @returns {Promise<string>} The extracted text content
-   */
-  async function extractTextFromPDF(file) {
-    const arrayBuffer = await file.arrayBuffer();
+  const serverButton = document.getElementById("toggle-server");
+  let serverRunning = false;
 
-    const pdfjsLib = await import(chrome.runtime.getURL('pdf.js/pdf.mjs'));
-    pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('pdf.js/pdf.worker.mjs');
-
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items.map(item => item.str).join(' ');
-      fullText += pageText + '\n';
+  chrome.storage.local.get("serverToken", (result) => {
+    const SERVER_TOKEN = result.serverToken;
+    if (!SERVER_TOKEN) {
+      console.warn("⚠️ No server token set in storage. Cannot toggle servers.");
+      return;
     }
-    return fullText;
-  }
+
+    serverButton.onclick = async () => {
+      const { serverToken } = await new Promise((res) =>
+        chrome.storage.local.get("serverToken", res)
+      );
+    
+      if (!serverToken) {
+        alert("❌ No server token found. Please set it via the gear icon.");
+        return;
+      }
+    
+      const url = `http://localhost:4200/${serverRunning ? 'stop' : 'start'}-services`;
+    
+      // 🟡 Indicate stopping/starting
+      serverButton.textContent = serverRunning ? "Stopping..." : "Starting...";
+      serverButton.style.backgroundColor = "#b8860b"; // goldenrod
+    
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": serverToken
+          }
+        });
+    
+        if (!res.ok) throw new Error(`Server responded with status ${res.status}`);
+    
+        const msg = await res.text();
+        console.log(`✅ ${serverRunning ? 'Stopped' : 'Started'} services:\n${msg}`);
+        serverRunning = !serverRunning;
+      } catch (err) {
+        console.error("❌ Failed to toggle services:", err);
+        serverButton.textContent = "⚠️ Error";
+        serverButton.style.backgroundColor = "#8B0000";
+        return;
+      }
+    
+      // ✅ Set final state
+      serverButton.textContent = serverRunning ? "Stop Servers" : "Start Servers";
+      serverButton.style.backgroundColor = serverRunning ? "#228B22" : "#8B0000";
+    };    
+  });
 
   if (gearButton) {
     /**
@@ -66,8 +118,10 @@ document.addEventListener("DOMContentLoaded", () => {
       modalContent.innerHTML = `
         <button id='closeModal' style="position:absolute;top:5px;right:10px;font-size:20px;background:none;border:none;color:white;cursor:pointer">✖️</button>
         <h3>🔐 API Keys</h3>
+        <label for='serverToken'>Server Control Token:</label>
+        <input type='password' id='serverToken' placeholder='...' style="width:100%;padding:8px;background:#1e1e1e;color:white;border:1px solid #555;margin-bottom:10px"/>
         <label for='apiKey'>OpenAI API Key:</label>
-        <input type='password' id='apiKey' placeholder='sk-...' style="width:100%;padding:8px;background:#1e1e1e;color:white;border:1px solid #555;margin-bottom:10px"/>
+        <input type='password' id='apiKey' placeholder='...' style="width:100%;padding:8px;background:#1e1e1e;color:white;border:1px solid #555;margin-bottom:10px"/>
         <label for='perplexityKey'>Perplexity API Key:</label>
         <input type='password' id='perplexityKey' placeholder='...' style="width:100%;padding:8px;background:#1e1e1e;color:white;border:1px solid #555;margin-bottom:10px"/>
         <div style="display:flex;gap:10px;margin-top:10px">
@@ -94,26 +148,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const apiKeyInput = modalContent.querySelector("#apiKey");
       const perplexityInput = modalContent.querySelector("#perplexityKey");
+      const serverTokenInput = modalContent.querySelector("#serverToken");
       const status = modalContent.querySelector("#status");
 
-      chrome.storage.local.get(["apiKey", "perplexityKey"], (result) => {
+      chrome.storage.local.get(["apiKey", "perplexityKey","serverToken"], (result) => {
         if (result.apiKey) apiKeyInput.value = result.apiKey;
         if (result.perplexityKey) perplexityInput.value = result.perplexityKey;
+        if (result.serverToken) serverTokenInput.value = result.serverToken;
       });
 
       modalContent.querySelector("#save").onclick = () => {
         const apiKey = apiKeyInput.value;
         const perplexityKey = perplexityInput.value;
-        chrome.storage.local.set({ apiKey, perplexityKey }, () => {
+        const serverToken = serverTokenInput.value;
+        chrome.storage.local.set({ apiKey, perplexityKey, serverToken }, () => {
           status.textContent = "✅ Keys saved!";
           setTimeout(() => (status.textContent = ""), 2000);
         });
       };
 
       modalContent.querySelector("#clear").onclick = () => {
-        chrome.storage.local.remove(["apiKey", "perplexityKey"], () => {
+        chrome.storage.local.remove(["apiKey", "perplexityKey","serverToken"], () => {
           apiKeyInput.value = "";
           perplexityInput.value = "";
+          serverTokenInput.value = "";
           status.textContent = "🧹 Keys cleared.";
           setTimeout(() => (status.textContent = ""), 2000);
         });
@@ -212,14 +270,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const response = await fetch(url);
             const blob = await response.blob();
             const file = new File([blob], "autofetched.pdf", { type: "application/pdf" });
-            const { default: PDFHandler } = await import(chrome.runtime.getURL('pdf-handler.js'));
-            console.log("📥 Calling PDFHandler.extractTextFromPDF...");
-            const result = await PDFHandler.extractTextFromPDF(file);
-            const text = typeof result === 'string' ? result : result?.text || '';
-            console.log("📤 Extracted PDF text length:", text.length);
-            console.log("📄 PDF content preview:", text.slice(0, 300));
-            const finalPrompt = `${userInput}\n\n--- Tab PDF Content Start ---\n${text.slice(0, 20000)}\n--- Tab PDF Content End ---`;
-            await sendPrompt(finalPrompt, userInput);
+        
+            const model = modelToggle?.checked ? 'gpt' : 'local';
+            await handlePDFWithModelFallback(file, userInput, model);
+        
           } catch (err) {
             console.warn("❌ Autofetch failed, falling back to upload prompt:", err);
             const uploadInput = document.createElement("input");

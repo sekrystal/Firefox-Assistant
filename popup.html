@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Assistant</title>
+  <title>Firefox Assistant</title>
   <style>
     @font-face {
       font-family: 'IBM Plex Mono';
@@ -56,8 +55,8 @@
       margin-bottom: 12px;
       white-space: pre-wrap;
       position: relative;
-      padding-right: 40px; /* Space for copy button */
-      user-select: text; /* Enable text selection */
+      padding-right: 40px;
+      user-select: text;
       cursor: text;
     }
 
@@ -250,22 +249,33 @@
       background-color: #4fc3f7;
       color: #1a1f2b;
     }
+   
+    #toggle-server {
+    transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    #toggle-server:hover {
+    filter: brightness(1.2);
+    border: 1px solid #999;
+    cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <button id="set-api-key" class="gear-button">⚙️</button>
   <div id="chat"></div>
+  <button id="toggle-server">Start Servers</button>
+  <textarea id="prompt" rows="3" placeholder="Ask something..."></textarea><br/>
+  <div class="button-container">
+    <button id="send">Send</button>
+    <button id="load-tab-pdf" style="display:none;">📄 Load PDF into Mistral</button>
+  </div>
   <div class="toggle-container">
     <label class="switch">
       <input type="checkbox" id="model-toggle">
       <span class="slider"></span>
     </label>
   </div>
-  <textarea id="prompt" placeholder="Type your intent... (Cmd+Enter to send)"></textarea>
-  <div class="button-container">
-    <button id="send">Send</button>
-  </div>
-  <script type="module" src="pdf-handler.js"></script>
-  <script type="module" src="popup.js"></script>
+  <script src="popup.js" type="module"></script>
 </body>
 </html>
